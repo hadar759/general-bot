@@ -1,11 +1,9 @@
-﻿using System.Diagnostics.Tracing;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using DSharpPlus.Entities;
-using DSharpPlus.EventArgs;
 
 namespace DiscordBot.Commands
 {
-    class PingCommand: ICommand
+    class Ping: ICommand
     {
         public async Task Run(DiscordMessage msg)
         {

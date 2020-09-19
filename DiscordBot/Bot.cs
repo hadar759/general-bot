@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using DiscordBot.Commands;
 using DSharpPlus;
+using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DiscordBot
 {
@@ -11,12 +14,12 @@ namespace DiscordBot
     {
         private string Token { get;}
         private string CommandPrefix { get; set; }
-        private ICommandGetter CommandGetter { get; set; }
+        private ICommandProvider CommandProvider { get; set; }
         private DiscordClient DiscordClient { get; }
         
-        public Bot(ICommandGetter commandGetter, Config.Config config)
+        public Bot(ICommandProvider commandProvider, Config.Config config)
         {
-            CommandGetter = commandGetter;
+            CommandProvider = commandProvider;
             Token = config.Token;
             CommandPrefix = config.Prefix;
             
@@ -28,6 +31,7 @@ namespace DiscordBot
             });
         }
         
+        
         /// <summary>
         /// Receives messages and handles them
         /// </summary>
@@ -35,8 +39,9 @@ namespace DiscordBot
         public async Task Run()
         {
             // We received a message
-            DiscordClient.MessageCreated += MessageHandler;
             
+            DiscordClient.MessageCreated += MessageHandler;
+
             await DiscordClient.ConnectAsync();
             await Task.Delay(-1);
         }
@@ -51,14 +56,20 @@ namespace DiscordBot
 
         private async Task MessageHandler(MessageCreateEventArgs e)
         {
-            if (!IsCommand(e.Message.Content))
-                return;
-
-            ICommand command = CommandGetter.Get(e.Message);
-
+            ICommand command = CommandProvider.ProvideCommand(e.Message.Content);
+            
             if (command is null)
             {
-                await e.Message.RespondAsync("Command not recognized :(");
+                foreach (var comm in CommandProvider.Commands.Values)
+                {
+                    await comm.OnMessage(e);
+                }
+            }
+            
+            if (command is null)
+            {
+                if (IsCommand(e.Message.Content))
+                    await e.Message.RespondAsync("Command not recognized :(");
                 return;
             }
             
